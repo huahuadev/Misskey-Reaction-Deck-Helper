@@ -1,9 +1,12 @@
 {
   "manifest_version": 3,
   "name": "Misskey Reaction Deck Helper",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Add/remove reactions to the deck directly from the emoji picker on misskey.io.",
   "icons": {
+    "16": "icon/icon16.png",
+    "48": "icon/icon48.png",
+    "128": "icon/icon128.png"
   },
   "content_scripts": [
     {
