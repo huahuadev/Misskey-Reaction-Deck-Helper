@@ -1,0 +1,47 @@
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.TemporaryItems
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Build outputs
+/dist/
+/build/
+/coverage/
+*.map
+
+# Node / package managers (optional)
+/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# IDE / editor
+.vscode/
+.idea/
+*.iml
+
+# Env files
+.env
+.env.*

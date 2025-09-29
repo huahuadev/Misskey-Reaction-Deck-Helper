@@ -4,6 +4,8 @@ Misskey のリアクションピッカーからリアクションデッキを直
 
 misskey.io のみをサポートしています。
 
+![screenshot](./image.png)
+
 ## 概要
 - content script がピッカーの生成を監視し、絵文字セルに `contextmenu` リスナーを付与
 - 右クリック時に独自のミニメニューを表示し、選択に応じてデッキを更新
