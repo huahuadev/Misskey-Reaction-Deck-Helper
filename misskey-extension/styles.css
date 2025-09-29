@@ -1,0 +1,27 @@
+.mrdh-menu {
+  position: fixed;
+  z-index: 2147483647;
+  background: color-mix(in hsl, var(--panel, #222) 85%, #000 15%);
+  color: var(--fg, #fff);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+}
+
+.mrdh-item {
+  display: block;
+  width: 180px;
+  text-align: left;
+  background: transparent;
+  color: inherit;
+  border: 0;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.mrdh-item:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+
