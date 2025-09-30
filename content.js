@@ -79,12 +79,18 @@ async function toggleReactionDeck(emoji, forceAdd) {
   }
 }
 
-function showMiniMenu(x, y, onAdd, onRemove) {
+function showMiniMenu(x, y, onAdd, onRemove, isAlreadyInDeck) {
   // 右クリック時に表示するミニメニュー（追加/削除）
   const menu = document.createElement('div');
   menu.className = 'mrdh-menu';
-  menu.innerHTML = '<button class="mrdh-item" data-act="add">デッキに追加</button>' +
-                   '<button class="mrdh-item" data-act="remove">デッキから削除</button>';
+  const addDisabled = isAlreadyInDeck ? ' disabled' : '';
+  const addLabel = isAlreadyInDeck ? 'デッキに追加済み' : 'デッキに追加';
+  const addClass = isAlreadyInDeck ? ' mrdh-added' : '';
+  const addTitle = isAlreadyInDeck ? 'すでにデッキに追加されています' : '';
+  const removeDisabled = isAlreadyInDeck ? '' : ' disabled';
+  const removeTitle = isAlreadyInDeck ? '' : 'デッキに追加されていません';
+  menu.innerHTML = '<button class="mrdh-item' + addClass + '" data-act="add"' + addDisabled + (addTitle ? ' title="' + addTitle + '"' : '') + '>' + addLabel + '</button>' +
+                   '<button class="mrdh-item mrdh-remove" data-act="remove"' + removeDisabled + (removeTitle ? ' title="' + removeTitle + '"' : '') + '>デッキから削除</button>';
   menu.style.left = x + 'px';
   menu.style.top = y + 'px';
   document.body.appendChild(menu);
@@ -93,6 +99,7 @@ function showMiniMenu(x, y, onAdd, onRemove) {
     const t = e.target;
     if (!(t instanceof HTMLElement)) return;
     const act = t.dataset.act;
+    if (t.hasAttribute('disabled')) return;
     if (act === 'add') onAdd();
     if (act === 'remove') onRemove();
     cleanup();
@@ -148,12 +155,15 @@ function bindCell(cell) {
   cell.__mrdhBound = true;
   const emoji = extractEmojiFromCell(cell);
   if (!emoji) return;
-  // 右クリックでメニューを表示（Misskey 本体のメニューとは独立）
+  // 右クリックでメニューを表示するリスナーを追加（Misskey 本体のメニューとは独立）
   cell.addEventListener('contextmenu', async (e) => {
     e.preventDefault();
+    const list = await getReactions();
+    const has = list.includes(emoji);
     showMiniMenu(e.clientX, e.clientY,
       async () => { await toggleReactionDeck(emoji, true); },
       async () => { await toggleReactionDeck(emoji, false); },
+      has,
     );
   }, { passive: false });
 }
@@ -175,9 +185,12 @@ function scanPicker(root) {
       const emoji = extractEmojiFromCell(cell);
       if (!emoji) return;
       e.preventDefault();
+      const list = await getReactions();
+      const has = list.includes(emoji);
       showMiniMenu(e.clientX, e.clientY,
         async () => { await toggleReactionDeck(emoji, true); },
         async () => { await toggleReactionDeck(emoji, false); },
+        has,
       );
     }, true);
   }

@@ -24,4 +24,30 @@
   background: rgba(255,255,255,0.08);
 }
 
+.mrdh-item[disabled] {
+	opacity: 0.45;
+	color: var(--fgTransparentWeak, rgba(255,255,255,0.6));
+	cursor: not-allowed;
+	background: transparent !important;
+	/* text-decoration: line-through; */
+}
+
+.mrdh-item.mrdh-added {
+	opacity: 0.6;
+	cursor: default;
+	position: relative;
+}
+.mrdh-item.mrdh-added::before {
+	content: '✓ ';
+	color: var(--accent, #4caf50);
+	font-weight: 600;
+}
+.mrdh-item.mrdh-remove {
+	color: #ff7474;
+}
+
+.mrdh-item.mrdh-remove[disabled] {
+	color: rgba(255,116,116,0.6);
+}
+
 
