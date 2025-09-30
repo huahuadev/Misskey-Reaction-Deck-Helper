@@ -1,30 +1,3 @@
-// defaultStore に触るため、ページ側に injected.js を注入する。
-(function inject() {
-  try {
-    const script = document.createElement('script');
-    script.src = chrome.runtime.getURL('injected.js');
-    script.type = 'text/javascript';
-    (document.head || document.documentElement).appendChild(script);
-    script.onload = () => script.remove();
-  } catch {}
-})();
-
-// ページ側(injected.js)と postMessage でやり取りするヘルパ。
-function callPage(method, payload) {
-  return new Promise((resolve) => {
-    // Misskey Reaction Deck Helper の略で reqId を生成
-    const reqId = 'mrdh-' + Math.random().toString(36).slice(2);
-    function onMessage(ev) {
-      if (ev.source !== window) return;
-      const data = ev.data;
-      if (!data || data.type !== 'MRDH_PAGE_RESPONSE' || data.reqId !== reqId) return;
-      window.removeEventListener('message', onMessage);
-      resolve(data.result);
-    }
-    window.addEventListener('message', onMessage);
-    try { window.postMessage({ type: 'MRDH_PAGE_REQUEST', reqId, method, payload }, '*'); } catch { resolve(undefined); }
-  });
-}
 
 // ログイン済みユーザーのトークンを Misskey 本体の localStorage から取得する。
 function getAccountToken() {
@@ -63,40 +36,47 @@ async function apiPost(path, body) {
   return await res.json();
 }
 
-// reactions（=リアクションデッキ）を取得。まず API を試し、失敗時はページから defaultStore にアクセスするようフォールバック。
+// reactions（=リアクションデッキ）を取得。
 async function getReactions() {
   try {
     const kv = await apiPost('i/registry/get', { scope: ['client', 'base'], key: 'reactions' });
     return Array.isArray(kv) ? kv : [];
   } catch (e) {
-    const res = await callPage('getReactions');
-    return Array.isArray(res) ? res : [];
+    const msg = (e && (e.error || e.message)) || 'unknown error';
+    alert('リアクションデッキの取得に失敗しました: ' + msg);
+    throw e;
   }
 }
 
-// reactions を更新。まず API を試し、失敗時はページから defaultStore にアクセスするようフォールバック。
+// reactions を更新。
 async function setReactions(list) {
   try {
     await apiPost('i/registry/set', { scope: ['client', 'base'], key: 'reactions', value: list });
   } catch (e) {
-    await callPage('setReactions', { list });
+    const msg = (e && (e.error || e.message)) || 'unknown error';
+    alert('リアクションデッキの更新に失敗しました: ' + msg);
+    throw e;
   }
 }
 
 // リアクションデッキに追加/削除を行う。
 // forceAdd が true の場合は必ず追加、false の場合は必ず削除、未指定の場合はトグル。
 async function toggleReactionDeck(emoji, forceAdd) {
-  const list = await getReactions();
-  const set = new Set(list);
-  const has = set.has(emoji);
-  if (forceAdd === true) {
-    if (!has) set.add(emoji);
-  } else if (forceAdd === false) {
-    if (has) set.delete(emoji);
-  } else {
-    if (has) set.delete(emoji); else set.add(emoji);
+  try {
+    const list = await getReactions();
+    const set = new Set(list);
+    const has = set.has(emoji);
+    if (forceAdd === true) {
+      if (!has) set.add(emoji);
+    } else if (forceAdd === false) {
+      if (has) set.delete(emoji);
+    } else {
+      if (has) set.delete(emoji); else set.add(emoji);
+    }
+    await setReactions(Array.from(set));
+  } catch (e) {
+    // get/set 内で alert 済み。
   }
-  await setReactions(Array.from(set));
 }
 
 function showMiniMenu(x, y, onAdd, onRemove) {
