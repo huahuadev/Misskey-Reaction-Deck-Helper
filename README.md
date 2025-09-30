@@ -14,9 +14,7 @@ misskey.io のみをサポートしています。
 ## 概要
 - content script がピッカーの生成を監視し、絵文字セルに `contextmenu` リスナーを付与
 - 右クリック時に独自のミニメニューを表示し、選択に応じてデッキを更新
-- デッキ更新は以下の順で実行します
-  1. ページと同オリジンの Misskey API（`/api/i/registry/get|set`）を呼び出す
-  2. 失敗した場合のみ、ページ文脈に注入した `injected.js` に依頼し、`defaultStore.set('reactions', …)` を実行
+- ページと同オリジンの Misskey API（`/api/i/registry/get|set`）を呼び出しデッキ更新
 
 ## インストール (開発者)
 1. Chrome の「拡張機能」ページを開く
