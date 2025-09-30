@@ -103,11 +103,42 @@ function showMiniMenu(x, y, onAdd, onRemove) {
   }, 0);
 }
 
+// 抽出した値が Misskey のリアクションキーとして妥当かを判定
+function isValidEmojiKey(key) {
+  if (typeof key !== 'string') return false;
+  const s = key.trim();
+  if (s.length === 0) return false;
+  // カスタム絵文字 :shortcode:
+  if (s.startsWith(':') && s.endsWith(':') && s.length > 2 && !/\s/.test(s)) return true;
+  // Unicode 絵文字（拡張絵文字の正規表現）
+  try {
+    return /\p{Extended_Pictographic}/u.test(s);
+  } catch {
+    // 環境によっては Unicode プロパティ未対応のため簡易判定
+    return s.length <= 8 && !s.includes(' ');
+  }
+}
+
 // リアクションセルからリアクション情報を取得する。
 function extractEmojiFromCell(cell) {
-  const fromData = cell.getAttribute('data-emoji') || cell.dataset.emoji;
-  if (fromData) return fromData;
-  // TODO: 互換フォールバックが出来ればここに追加
+  if (!cell) return null;
+  // 1) data-emoji（最近/ピン/一部セクション）
+  const fromData = (cell.getAttribute && cell.getAttribute('data-emoji')) || (cell.dataset && cell.dataset.emoji);
+  if (isValidEmojiKey(fromData)) return fromData;
+  // 2) 検索結果など: 内部の .emoji 要素の alt / テキスト
+  const emojiEl = cell.querySelector && cell.querySelector('.emoji');
+  if (emojiEl) {
+    const alt = emojiEl.getAttribute && emojiEl.getAttribute('alt');
+    if (isValidEmojiKey(alt)) return alt;
+    const txt = emojiEl.textContent && emojiEl.textContent.trim();
+    if (isValidEmojiKey(txt)) return txt;
+  }
+  // 3) 互換: 子孫の img[alt]
+  const img = cell.querySelector && cell.querySelector('img[alt]');
+  if (isValidEmojiKey(img && img.alt)) return img.alt;
+  // 4) 予備: title だが、必ず妥当性チェックを行う
+  const title = cell.getAttribute && cell.getAttribute('title');
+  if (isValidEmojiKey(title)) return title;
   return null;
 }
 
@@ -133,6 +164,23 @@ function scanPicker(root) {
   const scope = root.querySelector ? (root.querySelector('.emojis') || root) : root;
   const items = scope.querySelectorAll('button._button.item, ._button.item');
   items.forEach(bindCell);
+  // デリゲーション（disabled ボタンや未バインドセルにも対応）
+  if (!scope.__mrdhDelegated) {
+    scope.__mrdhDelegated = true;
+    scope.addEventListener('contextmenu', async (e) => {
+      const target = e.target instanceof HTMLElement ? e.target : null;
+      if (!target) return;
+      const cell = target.closest ? target.closest('button._button.item, ._button.item') : null;
+      if (!cell) return;
+      const emoji = extractEmojiFromCell(cell);
+      if (!emoji) return;
+      e.preventDefault();
+      showMiniMenu(e.clientX, e.clientY,
+        async () => { await toggleReactionDeck(emoji, true); },
+        async () => { await toggleReactionDeck(emoji, false); },
+      );
+    }, true);
+  }
 }
 
 // リアクションピッカーのルート要素かどうかを判定する。
