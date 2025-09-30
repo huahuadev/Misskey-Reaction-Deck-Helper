@@ -6,6 +6,11 @@ misskey.io のみをサポートしています。
 
 ![screenshot](./image.png)
 
+## 仕組み
+リアクションデッキの内容は、[misskey のレジストリ](https://misskey.io/registry)に保存されています。( `client/base` の `reactions` です)
+
+本拡張機能は、レジストリにアクセスして、直接その内容を書き変えることでリアクションデッキを編集しています。
+
 ## 概要
 - content script がピッカーの生成を監視し、絵文字セルに `contextmenu` リスナーを付与
 - 右クリック時に独自のミニメニューを表示し、選択に応じてデッキを更新
