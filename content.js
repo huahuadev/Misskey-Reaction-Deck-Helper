@@ -194,6 +194,9 @@ function scanPicker(root) {
       );
     }, true);
   }
+
+  // デッキ（ピン留め）グリッド用のドラッグ&ドロップを初期化
+  setupDeckDnd(scope);
 }
 
 // リアクションピッカーのルート要素かどうかを判定する。
@@ -219,5 +222,132 @@ mo.observe(document.documentElement, { childList: true, subtree: true });
 
 // 初期スキャン（既にピッカーが開いている場合にも対応）
 scanPicker(document.documentElement);
+
+// DnD
+function setupDeckDnd(scope) {
+  const deckBody = scope.querySelector && scope.querySelector('.group.index > section:first-child .body');
+  if (!deckBody) return;
+  if (deckBody.__mrdhDndSetup) return;
+  deckBody.__mrdhDndSetup = true;
+
+  const addHandles = () => {
+    const cells = deckBody.querySelectorAll('button._button.item, ._button.item');
+    cells.forEach(cell => {
+      // 透明ハンドル（クリック領域を確保）
+      if (!cell.querySelector('.mrdh-dnd-handle')) {
+        const handle = document.createElement('div');
+        handle.className = 'mrdh-dnd-handle';
+        handle.addEventListener('mousedown', (ev) => beginDeckDrag(ev, deckBody));
+        cell.style.position = cell.style.position || 'relative';
+        cell.appendChild(handle);
+      }
+      // 通常の DnD と同様、セルの mousedown ですぐ開始
+      if (!cell.__mrdhDndCell) {
+        cell.__mrdhDndCell = true;
+        cell.addEventListener('mousedown', (ev) => beginDeckDrag(ev, deckBody));
+      }
+    });
+  };
+  addHandles();
+
+  // 変化に追従
+  const obs = new MutationObserver(() => addHandles());
+  obs.observe(deckBody, { childList: true, subtree: true });
+}
+
+function beginDeckDrag(ev, deckBody) {
+  if (ev.button !== 0) return; // left only
+  ev.preventDefault();
+  const cell = (ev.currentTarget && ev.currentTarget.closest) ? ev.currentTarget.closest('button._button.item, ._button.item') : (ev.target && ev.target.closest ? ev.target.closest('button._button.item, ._button.item') : null);
+  if (!cell) return;
+  const cells = Array.from(deckBody.querySelectorAll('button._button.item, ._button.item'));
+  const startIndex = cells.indexOf(cell);
+  if (startIndex < 0) return;
+
+  const insertLine = document.createElement('div');
+  insertLine.className = 'mrdh-insert-line';
+  document.body.appendChild(insertLine);
+
+  // ドラッグ中のゴースト
+  const ghost = document.createElement('div');
+  ghost.className = 'mrdh-ghost';
+  ghost.innerHTML = cell.innerHTML;
+  document.body.appendChild(ghost);
+  const updateGhost = (e) => {
+    ghost.style.left = (e.clientX + 8) + 'px';
+    ghost.style.top = (e.clientY + 8) + 'px';
+  };
+  updateGhost(ev);
+
+  // 視覚的に掴んでいることを示す
+  cell.classList.add('mrdh-dragging');
+  const prevCursor = document.body.style.cursor;
+  document.body.style.cursor = 'grabbing';
+
+  function placeInsertAt(index, clientY) {
+    // index は 0..cells.length の間の挿入位置
+    const last = cells[cells.length - 1];
+    const rect = (index >= cells.length ? last : cells[index]).getBoundingClientRect();
+    const x = index >= cells.length ? (last.getBoundingClientRect().right) : rect.left;
+    insertLine.style.left = (x - 2) + 'px';
+    insertLine.style.top = rect.top + 'px';
+    insertLine.style.height = rect.height + 'px';
+  }
+
+  function computeIndex(clientX, clientY) {
+    // 最も近いセルの左/右で before/after を決める
+    let nearest = 0;
+    let best = Infinity;
+    for (let i = 0; i < cells.length; i++) {
+      const r = cells[i].getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const d = Math.hypot(cx - clientX, cy - clientY);
+      if (d < best) { best = d; nearest = i; }
+    }
+    const r = cells[nearest].getBoundingClientRect();
+    const before = clientX < (r.left + r.width / 2);
+    return before ? nearest : (nearest + 1);
+  }
+
+  let currentIndex = startIndex;
+  function onMove(e) {
+    const idx = computeIndex(e.clientX, e.clientY);
+    currentIndex = idx;
+    placeInsertAt(idx, e.clientY);
+    updateGhost(e);
+  }
+  function onUp(e) {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    insertLine.remove();
+    ghost.remove();
+    cell.classList.remove('mrdh-dragging');
+    document.body.style.cursor = prevCursor;
+    const to = currentIndex > cells.length ? cells.length : currentIndex;
+    if (to === startIndex || to === startIndex + 1) return;
+    // 並べ替え実行
+    getReactions().then(list => {
+      const next = moveOne(list, startIndex, to > startIndex ? to - 1 : to);
+      return setReactions(next).then(() => {
+        // 視覚フィードバック: DOM も入れ替える
+        if (to > startIndex) {
+          deckBody.insertBefore(cells[startIndex], cells[to - 1].nextSibling);
+        } else {
+          deckBody.insertBefore(cells[startIndex], cells[to]);
+        }
+      });
+    }).catch(() => {});
+  }
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
+function moveOne(arr, from, to) {
+  const a = arr.slice();
+  const [el] = a.splice(from, 1);
+  a.splice(to, 0, el);
+  return a;
+}
 
 
