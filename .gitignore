@@ -6,6 +6,8 @@
 *.7z
 *.rar
 
+sample/*
+
 # macOS
 .DS_Store
 .AppleDouble

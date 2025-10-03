@@ -40,7 +40,7 @@ async function apiPost(path, body) {
 async function getReactions() {
   try {
     const kv = await apiPost('i/registry/get', { scope: ['client', 'base'], key: 'reactions' });
-    return Array.isArray(kv) ? kv : [];
+    return sanitizeReactions(Array.isArray(kv) ? kv : []);
   } catch (e) {
     const msg = (e && (e.error || e.message)) || 'unknown error';
     alert('リアクションデッキの取得に失敗しました: ' + msg);
@@ -51,7 +51,17 @@ async function getReactions() {
 // reactions を更新。
 async function setReactions(list) {
   try {
-    await apiPost('i/registry/set', { scope: ['client', 'base'], key: 'reactions', value: list });
+    const cleaned = sanitizeReactions(list);
+    console.log("cleaned", cleaned);
+    console.log("list", list);
+    console.log("Array.isArray(list)", Array.isArray(list));
+    console.log("list.length", list.length);
+    console.log("cleaned.length", cleaned.length);
+    if (cleaned.length !== (Array.isArray(list) ? list.length : 0)) {
+      alert('リアクションデッキの編集中にエラーが発生したため、変更をキャンセルしました。');
+      return;
+    }
+    await apiPost('i/registry/set', { scope: ['client', 'base'], key: 'reactions', value: cleaned });
   } catch (e) {
     const msg = (e && (e.error || e.message)) || 'unknown error';
     alert('リアクションデッキの更新に失敗しました: ' + msg);
@@ -225,7 +235,14 @@ scanPicker(document.documentElement);
 
 // DnD
 function setupDeckDnd(scope) {
-  const deckBody = scope.querySelector && scope.querySelector('.group.index > section:first-child .body');
+  // .group.index 配下の最初の section が deck（ピン留め）で、最近使用や他セクションは header を持つ
+  const group = scope.querySelector && scope.querySelector('.group.index');
+  if (!group) return;
+  const firstSection = group.querySelector(':scope > section:first-child');
+  if (!firstSection) return;
+  // 安全ガード: header がある = 最近使用 なので DnD 対象外
+  if (firstSection.querySelector(':scope > header')) return;
+  const deckBody = firstSection.querySelector(':scope > .body');
   if (!deckBody) return;
   if (deckBody.__mrdhDndSetup) return;
   deckBody.__mrdhDndSetup = true;
@@ -348,6 +365,16 @@ function moveOne(arr, from, to) {
   const [el] = a.splice(from, 1);
   a.splice(to, 0, el);
   return a;
+}
+
+// ------------------ validation helpers ------------------
+function sanitizeReactions(list) {
+  if (!Array.isArray(list)) return [];
+  const out = [];
+  for (const v of list) {
+    if (typeof v === 'string' && isValidEmojiKey(v)) out.push(v);
+  }
+  return out;
 }
 
 

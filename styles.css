@@ -53,11 +53,11 @@
 
 .mrdh-insert-line {
   position: fixed;
-  width: 3px;
+  width: 4px;
   background: var(--accent, #4caf50);
   border-radius: 2px;
-  box-shadow: 0 0 0 3px rgba(76,175,80,0.15);
-  z-index: 999999;
+  box-shadow: 0 0 0 3px rgba(76,175,80,0.15), 0 0 0 1px rgba(0,0,0,0.35) inset;
+  z-index: 2147483646;
   pointer-events: none;
 }
 
@@ -75,7 +75,7 @@
 .mrdh-ghost {
   position: fixed;
   pointer-events: none;
-  z-index: 1000000;
+  z-index: 2147483646;
   opacity: 0.9;
   transform: scale(1.08);
   filter: drop-shadow(0 4px 12px rgba(0,0,0,0.35));
